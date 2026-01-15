@@ -42,6 +42,10 @@ bazel build //tests/verilator_sim:core_mini_axi_sim
 
 # Run the binary on the simulator:
 bazel-bin/tests/verilator_sim/core_mini_axi_sim --binary bazel-out/k8-fastbuild-ST-dd8dc713f32d/bin/examples/coralnpu_v2_hello_world_add_floats.elf
+
+#standalone test
+bazel test //tests/cocotb:core_mini_axi_standalone_boot_cocotb --test_output=errors
+bazel test //tests/cocotb:core_mini_axi_sim_cocotb_core_mini_axi_basic_write_read_memory --test_output=errors
 ```
 
 
