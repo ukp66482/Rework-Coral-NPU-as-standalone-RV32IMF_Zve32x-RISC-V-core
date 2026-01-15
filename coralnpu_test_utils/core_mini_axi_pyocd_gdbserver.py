@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import queue
+import socket
 import subprocess
 import tempfile
 import threading
+import time
 
 from bazel_tools.tools.python.runfiles import runfiles
 from enum import Enum
@@ -182,9 +184,11 @@ class CoreMiniAxiContext(DebugContext):
         self._halted = False
 
     def read_core_registers_raw(self, reg_list):
+        # Some GDB flows will attempt to read registers immediately after
+        # connecting. If we're not halted yet, halt on-demand so register reads
+        # can proceed.
         if not self._halted:
-            raise exceptions.CoreRegisterAccessError("Not halted!")
-            return []
+            self.target.halt()
         return self.target.read_core_registers_raw(reg_list)
 
     def read_memory_block8(self, addr, size):
@@ -332,6 +336,9 @@ class CoreMiniAxiSession(Session):
         self._notify_cb = notify_cb
 
     def notify(self, event, source=None, data=None):
+        # Preserve pyOCD's internal event handling, while still allowing tests
+        # to hook into session events if desired.
+        super().notify(event, source=source, data=data)
         self._notify_cb()
 
     def halted(self):
@@ -348,10 +355,23 @@ class CoreMiniAxiGDBServer(object):
     async def run(self, elf, gdb_commands):
         entry_point = await self.core_mini_axi.load_elf(elf)
 
+        def wait_for_tcp_port(host, port, timeout_s=5.0):
+            deadline = time.time() + timeout_s
+            while time.time() < deadline:
+                try:
+                    with socket.create_connection((host, port), timeout=0.1):
+                        return True
+                except OSError:
+                    time.sleep(0.01)
+            return False
+
         def exec_gdb():
             with tempfile.NamedTemporaryFile(mode='w+') as cmdfile:
                 r = runfiles.Create()
                 gdb_path = r.Rlocation("coralnpu_hw/toolchain/gdb")
+                if not wait_for_tcp_port("127.0.0.1", 3333, timeout_s=5.0):
+                    self.finish.put(False)
+                    return
                 cmds_pre = [
                     'set architecture riscv:rv32',
                     'target remote :3333',
@@ -369,36 +389,45 @@ class CoreMiniAxiGDBServer(object):
                     cmdfile.name,
                     elf.name,
                 ]
-                ret = subprocess.call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                self.finish.put(ret == 0)
-
-        def notify_cb():
-            gdb_daemon = threading.Thread(target=exec_gdb, daemon=True)
-            gdb_daemon.start()
+                completed = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                if completed.returncode != 0:
+                    # Keep output terse but useful; Bazel will show it in test logs.
+                    print(
+                        "GDB invocation failed (exit=%d). Output:\n%s"
+                        % (completed.returncode, completed.stdout),
+                        flush=True,
+                    )
+                self.finish.put(completed.returncode == 0)
 
         gdbserver_queue = queue.Queue()
         gdbserver_queue_rsp = queue.Queue()
-        session = CoreMiniAxiSession(self.core_mini_axi, gdbserver_queue, gdbserver_queue_rsp, notify_cb)
+        session = CoreMiniAxiSession(self.core_mini_axi, gdbserver_queue, gdbserver_queue_rsp, lambda: None)
         session.open()
         gdb_server = GDBServer(session=session)
         gdb_server.start()
 
+        gdb_daemon = threading.Thread(target=exec_gdb, daemon=True)
+        gdb_daemon.start()
+
         executed = False
         bp_set = False
         bp_triggered = False
+        gdb_ok = None
         while True:
+            try:
+                gdb_ok = self.finish.get_nowait()
+                break
+            except queue.Empty:
+                pass
             try:
                 (t, e, kwargs) = gdbserver_queue.get(timeout=0.0001)
             except queue.Empty:
-                if gdb_server.is_alive():
-                    halted = await self.core_mini_axi.dm_check_for_halted()
-                    if not session.halted() and halted and bp_set and not bp_triggered:
-                        bp_triggered = True
-                        session.bp_halt()
-                    await ClockCycles(self.core_mini_axi.dut.io_aclk, 1)
-                    continue
-                else:
-                    break
+                halted = await self.core_mini_axi.dm_check_for_halted()
+                if not session.halted() and halted and bp_set and not bp_triggered:
+                    bp_triggered = True
+                    session.bp_halt()
+                await ClockCycles(self.core_mini_axi.dut.io_aclk, 1)
+                continue
             if t == CoreMiniAxiDebugOps.HALT:
                 await self.core_mini_axi.dm_request_halt()
                 if not executed:
@@ -450,4 +479,4 @@ class CoreMiniAxiGDBServer(object):
             e.set()
 
         gdb_server.stop()
-        return self.finish.get()
+        return bool(gdb_ok)

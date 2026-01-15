@@ -38,14 +38,10 @@ VCS_BUILD_ARGS = [
     "line+cond+tgl+branch+assert",
     "-cm_hier",
     "../tests/cocotb/coverage_exclude.cfg",
-    # TODO(davidgao): enable this when ready
-    # "-xprop=../tests/cocotb/xprop.cfg",
 ]
 
 VCS_TEST_ARGS = [
     "+vcs+fsdbon",
-    "+fsdb+mda",
-    "+fsdb+struct",
     "-cm",
     "line+cond+tgl+branch+assert",
 ]

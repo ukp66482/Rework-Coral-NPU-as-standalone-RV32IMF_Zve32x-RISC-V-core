@@ -44,7 +44,7 @@ def _verilator_cocotb_model_impl(ctx):
     make_log = ctx.actions.declare_file(outdir_name + "/make.log")
     outdir = output_file.dirname
 
-    verilator_root = "$PWD/{}.runfiles/coralnpu_hw/external/verilator".format(ctx.executable._verilator_bin.path)
+    verilator_root = "$PWD/{}.runfiles/verilator".format(ctx.executable._verilator_bin.path)
     cocotb_lib_path = "$PWD/{}".format(ctx.files._cocotb_verilator_lib[0].dirname)
     verilator_cmd = " ".join("""
         VERILATOR_ROOT={verilator_root} {verilator} \

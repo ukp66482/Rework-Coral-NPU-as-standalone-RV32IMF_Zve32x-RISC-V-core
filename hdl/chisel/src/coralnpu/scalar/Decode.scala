@@ -285,9 +285,7 @@ class Dispatch(p: Parameters) extends Module {
     // Scalar logging.
     val slog = Output(Bool())
 
-    val retirement_buffer_nSpace = Input(UInt(5.W))
-    val retirement_buffer_empty = Input(Bool())
-    val retirement_buffer_trap_pending = Input(Bool())
+    val retirement_buffer_nSpace = Option.when(p.useRetirementBuffer)(Input(UInt(5.W)))
     val single_step = Option.when(p.useDebugModule)(Input(Bool()))
     val debug_mode = Option.when(p.useDebugModule)(Input(Bool()))
   })
@@ -496,9 +494,7 @@ class DispatchV2(p: Parameters) extends Dispatch(p) {
       lsuInterlock(i) && // Ensure lsu instructions can be dispatched into queue
       rvvInterlock(i) && // Ensure rvv instructions can be dispatched into queue
       !undefInterlock(i) &&     // Ensure undef is only dispatched from first slot
-      (i.U < io.retirement_buffer_nSpace) && // Retirement buffer needs space for our slot
-      !io.retirement_buffer_trap_pending && // Stall dispatch when a trap is pending
-      (!decodedInsts(i).isCsr() || io.retirement_buffer_empty) && // CSRs must wait for ROB to be empty
+      io.retirement_buffer_nSpace.map(x => i.U < x).getOrElse(true.B) && // Retirement buffer needs space for our slot
       singleStepInterlock(i) &&
       mpauseInterlock(i)
   )

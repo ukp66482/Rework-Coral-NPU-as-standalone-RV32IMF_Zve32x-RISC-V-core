@@ -28,44 +28,11 @@ TUTORIAL_TESTCASES = [
 ]
 # END_TESTCASES_FOR_tutorial
 
-# BEGIN_TESTCASES_FOR_tutorial_rvv
-TEST_RVV_TESTCASES = [
-    "RvvCoreMiniAxi_tutorial",
+# BEGIN_TESTCASES_FOR_hello_world_float_core_mini_axi
+HELLO_WORLD_TESTCASES = [
+    "core_mini_axi_tutorial",
 ]
-# END_TESTCASES_FOR_tutorial_rvv
-
-
-cocotb_test_suite(
-    name = "test_rvv",
-    simulators = [
-        "verilator",
-        "vcs",
-    ],
-    testcases = TEST_RVV_TESTCASES,
-    testcases_vname = "TEST_RVV_TESTCASES",
-    tests_kwargs = {
-        "waves": False,
-        "hdl_toplevel": "RvvCoreMiniAxi",
-        "seed": "42",
-        "test_module": ["test_rvv.py"],
-        "deps": [
-            "//coralnpu_test_utils:core_mini_axi_sim_interface",
-            "//coralnpu_test_utils:sim_test_fixture",
-            "@rules_python//python/runfiles",
-        ],
-        "data": [":coralnpu_v2_program_rvv"],
-        "size": "small",
-    },
-    vcs_build_args = VCS_BUILD_ARGS,
-    vcs_data = [
-        ":coralnpu_v2_program_rvv",
-        "//tests/cocotb:coverage_exclude.cfg",
-    ],
-    vcs_defines = VCS_DEFINES,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:rvv_core_mini_axi_cc_library_verilog"],
-    verilator_model = "//tests/cocotb:rvv_core_mini_axi_model",
-)
+# END_TESTCASES_FOR_hello_world_float_core_mini_axi
 
 cocotb_test_suite(
     name = "tutorial",
@@ -98,12 +65,67 @@ cocotb_test_suite(
     verilator_model = "//tests/cocotb:core_mini_axi_model",
 )
 
+cocotb_test_suite(
+    name = "hello_world_float_core_mini_axi",
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
+    testcases = HELLO_WORLD_TESTCASES,
+    testcases_vname = "HELLO_WORLD_TESTCASES",
+    tests_kwargs = {
+        "waves": False,
+        "hdl_toplevel": "CoreMiniAxi",
+        "seed": "42",
+        "test_module": ["hello_world_float_core_mini_axi.py"],
+        "deps": [
+            "//coralnpu_test_utils:core_mini_axi_sim_interface",
+            "@bazel_tools//tools/python/runfiles",
+        ],
+        "data": ["//examples:coralnpu_v2_hello_world_add_floats.elf"],
+        "size": "small",
+    },
+    vcs_build_args = VCS_BUILD_ARGS,
+    vcs_data = [
+        "//examples:coralnpu_v2_hello_world_add_floats.elf",
+        "//tests/cocotb:coverage_exclude.cfg",
+    ],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:core_mini_axi_cc_library_verilog"],
+    verilator_model = "//tests/cocotb:core_mini_axi_model",
+)
+
 coralnpu_v2_binary(
     name = "coralnpu_v2_program",
     srcs = ["program.cc"],
 )
 
 coralnpu_v2_binary(
-    name = "coralnpu_v2_program_rvv",
-    srcs = ["program_rvv.cc"],
+    name = "tflite_micro_test",
+    srcs = [
+        "hello_world_tflite_cc",
+        "tflite_micro_test.cc",
+    ],
+    hdrs = ["hello_world_tflite.h"],
+    linker_script = "@coralnpu_hw//toolchain:coralnpu_tcm_highmem.ld",
+    deps = [
+        "@tflite_micro//tensorflow/lite/micro:micro_framework",
+        "@tflite_micro//tensorflow/lite/micro:micro_log",
+        "@tflite_micro//tensorflow/lite/micro:micro_profiler",
+        "@tflite_micro//tensorflow/lite/micro:op_resolvers",
+        "@tflite_micro//tensorflow/lite/micro:system_setup",
+    ],
+)
+
+generate_cc_arrays(
+    name = "hello_world_tflite_cc",
+    src = "@tflite_micro//tensorflow/lite/micro/examples/hello_world/models:hello_world_int8.tflite",
+    out = "hello_world_tflite.cc",
+)
+
+generate_cc_arrays(
+    name = "hello_world_tflite_h",
+    src = "@tflite_micro//tensorflow/lite/micro/examples/hello_world/models:hello_world_int8.tflite",
+    out = "hello_world_tflite.h",
 )

@@ -102,12 +102,10 @@ class Mlu(p: Parameters) extends Module {
   val op3in = stage3Input.bits.op
   val prod3in = stage3Input.bits.prod
 
-  // To be guarded by stage3Input.valid
-  val mul = Mux(
-      op3in === MluOp.MUL,
-      prod3in(31, 0),  // MUL
-      prod3in(63,32)   // MULH, MULHSU, MULHU
-  )
+  val mul = MuxUpTo1H(0.U(32.W), Seq(
+    (op3in === MluOp.MUL) -> prod3in(31, 0),
+    op3in.isOneOf(MluOp.MULH, MluOp.MULHSU, MluOp.MULHU) -> prod3in(63,32),
+  ))
 
   // Stage 3 output result
   // Multiplier has a registered output.

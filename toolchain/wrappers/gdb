@@ -18,11 +18,19 @@ DRIVER_DIR=$(dirname "$0")
 TOOLCHAIN="toolchain_coralnpu_v2"
 PREFIX="riscv32-unknown-elf"
 
-LIBMPFR_PATH=$(ldconfig -p | grep 'mpfr.so$' | awk '{print $4}')
 WORKDIR=$(mktemp -d)
 trap "rm -rf ${WORKDIR}" EXIT
-ln -sf ${LIBMPFR_PATH} ${WORKDIR}/libmpfr.so.4
 
-export LD_LIBRARY_PATH=${WORKDIR}:$LD_LIBRARY_PATH
+# The bundled GDB may depend on `libmpfr.so.4`. Many distros ship newer
+# SONAMEs (e.g. `libmpfr.so.6`), so provide a compatibility symlink when
+# possible.
+LIBMPFR_PATH=$(
+  ldconfig -p 2>/dev/null | awk '/libmpfr\.so(\.|$)/ {print $NF; exit}'
+)
+if [[ -n "${LIBMPFR_PATH}" && -r "${LIBMPFR_PATH}" ]]; then
+  ln -sf "${LIBMPFR_PATH}" "${WORKDIR}/libmpfr.so.4"
+  export LD_LIBRARY_PATH="${WORKDIR}:${LD_LIBRARY_PATH}"
+fi
+
 exec "${DRIVER_DIR}/../external/${TOOLCHAIN}/bin/${PREFIX}-gdb" \
     "$@"\

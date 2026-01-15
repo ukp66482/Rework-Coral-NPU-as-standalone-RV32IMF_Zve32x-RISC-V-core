@@ -14,14 +14,12 @@
 
 #include <stdint.h>
 
-uint32_t input1_buffer[8] __attribute__((section(".data")));
-uint32_t input2_buffer[8] __attribute__((section(".data")));
-uint32_t output_buffer[8] __attribute__((section(".data")));
+// TODO: Add two inputs buffers of 8 uint32_t's (input1_buffer, input2_buffer)
+// TODO: Add one output buffer of 8 uint32_t's (output_buffer)
 
 int main(int argc, char** argv) {
-for (int i = 0; i < 8; i++) {
-  output_buffer[i] = input1_buffer[i] + input2_buffer[i];
-}
-return 0;
-}
+  // TODO: Add code to element wise add/subtract from input1_buffer and
+  // input2_buffer and store the result to output_buffer.
 
+  return 0;
+}

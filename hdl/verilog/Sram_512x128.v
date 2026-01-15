@@ -112,7 +112,41 @@ module Sram_512x128(
 
   assign rdata = mem[raddr];
 
+`ifdef CORALNPU_STANDALONE_TCM_INIT
+  // Standalone "hardware-boot" init (FPGA-friendly).
+  integer i;
+  initial begin
+    for (i = 0; i < 512; i++) begin
+      mem[i] = 128'h0;
+    end
+    // Minimal program:
+    //   *(uint32_t*)0x10000 = 1; wfi; j .
+    // 0x000102B7  lui  x5, 0x10
+    // 0x00100313  addi x6, x0, 1
+    // 0x0062A023  sw   x6, 0(x5)
+    // 0x10500073  wfi
+    // 0x0000006F  jal  x0, 0
+    mem[0] = 128'h10500073_0062A023_00100313_000102B7;
+    mem[1] = 128'h00000000_00000000_00000000_0000006F;
+  end
+`else
 `ifndef SYNTHESIS
+`ifndef VERILATOR
+  function automatic bit load_mem_from_plusarg;
+    input string plusarg;
+    string mem_file;
+    begin
+      if ($value$plusargs(plusarg, mem_file)) begin
+        $display("%m: Loading memory from %s", mem_file);
+        $readmemh(mem_file, mem);
+        load_mem_from_plusarg = 1'b1;
+      end else begin
+        load_mem_from_plusarg = 1'b0;
+      end
+    end
+  endfunction
+`endif
+
   task randomMemoryAll;
   for (int i = 0; i < 512; i++) begin
     // $random returns a 32-bit value, so four are concatenated to fill the 128-bit register.
@@ -121,8 +155,17 @@ module Sram_512x128(
   endtask
 
   initial begin
+    // Prefer deterministic initialization from a mem file when provided.
+    // For the default CoralNPU configuration, this 512x128 SRAM backs the 8KB ITCM.
+`ifdef VERILATOR
     randomMemoryAll;
+`else
+    if (!load_mem_from_plusarg("ITCM_MEM_FILE=%s")) begin
+      randomMemoryAll;
+    end
+`endif
   end
+`endif
 `endif
 
   always @(posedge clock) begin

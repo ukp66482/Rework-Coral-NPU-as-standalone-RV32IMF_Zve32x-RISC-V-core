@@ -232,8 +232,6 @@ module coralnpu_tb_top;
   // ELF Memory Loading and `tohost` Monitor
   //--------------------------------------------------------------------------
   initial begin
-    string itcm_mem_file;
-    string dtcm_mem_file;
     string tohost_addr_str;
     logic [31:0] tohost_addr;
     uvm_event tohost_written_event;
@@ -243,15 +241,7 @@ module coralnpu_tb_top;
                                    "tohost_written_event",
                                    tohost_written_event);
 
-    // Load memories at time 0
-    if ($value$plusargs("ITCM_MEM_FILE=%s", itcm_mem_file)) begin
-      `uvm_info("TB_TOP", $sformatf("Loading ITCM from %s", itcm_mem_file), UVM_LOW)
-      $readmemh(itcm_mem_file, coralnpu_tb_top.u_dut.itcm.sram.sramModules_0.mem);
-    end
-    if ($value$plusargs("DTCM_MEM_FILE=%s", dtcm_mem_file)) begin
-      `uvm_info("TB_TOP", $sformatf("Loading DTCM from %s", dtcm_mem_file), UVM_LOW)
-      $readmemh(dtcm_mem_file, coralnpu_tb_top.u_dut.dtcm.sram.sramModules_0.mem);
-    end
+    // ITCM/DTCM loading is handled inside the SRAM models (see `hdl/verilog/Sram_*x128.v`).
 
     // Get the tohost address from the plusargs
     if ($value$plusargs("TOHOST_ADDR=%s", tohost_addr_str)) begin

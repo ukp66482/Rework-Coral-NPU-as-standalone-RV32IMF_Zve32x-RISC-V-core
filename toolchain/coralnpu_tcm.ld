@@ -3,9 +3,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 MEMORY {
-    ITCM(rx): ORIGIN = 0x00000000, LENGTH = @@ITCM_LENGTH@@K
-    DTCM(rw): ORIGIN = @@DTCM_ORIGIN@@, LENGTH = @@DTCM_LENGTH@@K
-    EXTMEM(rw): ORIGIN = 0x20000000, LENGTH = 4096K
+    ITCM(rx): ORIGIN = 0x00000000, LENGTH = 8K
+    DTCM(rw): ORIGIN = 0x00010000, LENGTH = 32K
 }
 
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x80;
@@ -116,13 +115,4 @@ SECTIONS {
       . += STACK_SIZE;
       __stack_end__ = .;
     } > DTCM
-
-    /* EXTMEM data here */
-    . = ORIGIN(EXTMEM);
-    .extdata (NOLOAD) : ALIGN(16) {
-      __extdata_start__ = .;
-      *(.extdata)
-      *(.extdata.*)
-      __extdata_end__ = .;
-    } > EXTMEM
 }

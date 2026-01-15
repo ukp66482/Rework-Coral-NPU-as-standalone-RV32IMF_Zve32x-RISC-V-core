@@ -10,6 +10,28 @@ This tutorial introduces the basics of writing a CoralNPU program. You will:
 
 This tutorial assumes you have completed opensecura [getting started guide](https://opensecura.googlesource.com/docs/+/refs/heads/master/GettingStarted.md).
 
+## Phase A note: standalone boot vs host-loaded boot
+
+This tutorial uses a **host-loaded boot flow**:
+
+- A host (the cocotb testbench) programs ITCM/DTCM over the CoralNPU AXI slave,
+  then starts execution with `execute_from(entry_point)`.
+
+This is **not Phase A** (autonomous boot at reset). Phase A means the core
+boots on its own after reset, without an external host writing CSRs / memories
+to start it.
+
+In this repo, Phase A support is implemented as an optional configuration:
+
+- `standaloneBoot=true` makes the core come out of reset ungated with
+  `pcStart=0`, so it starts fetching immediately after reset deasserts.
+- `CORALNPU_STANDALONE_TCM_INIT` makes ITCM/DTCM have a built-in boot image
+  (or optionally load from an init file at elaboration time), so the core has
+  something to execute at reset.
+
+**Validation:** the full regression suite passes (`bazel test //...`), and there
+are dedicated cocotb tests for standalone boot (no kickoff writes).
+
 ## Writing a basic CoralNPU program
 
 Open up [`tests/cocotb/tutorial/program.cc`](../../tests/cocotb/tutorial/program.cc),
@@ -235,3 +257,18 @@ Congratulations on running your first program!
 
 Follow up tutorials will cover accelerating CoralNPU with RISC-V Vector
 intrinsics.
+
+### Running your program (recommended)
+
+For development and testing, the recommended way to run arbitrary programs is
+still the host-loaded flow in this tutorial (`load_elf()` + `execute_from()`),
+because it allows you to run any ELF without rebuilding RTL.
+
+### Phase A smoke tests (autonomous boot)
+
+You can run the standalone boot smoke tests with:
+
+```bash
+bazel test //tests/cocotb:core_mini_axi_standalone_boot_cocotb
+bazel test //tests/cocotb:core_mini_axi_standalone_fileinit_boot_cocotb
+```

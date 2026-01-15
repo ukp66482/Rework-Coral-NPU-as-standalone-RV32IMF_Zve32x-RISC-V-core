@@ -112,12 +112,10 @@ object EmitCore extends App {
       p.enableDebug = arg.split("=")(1).toBoolean
     } else if (arg.startsWith("--lsuDataBits")) {
       p.lsuDataBits = arg.split("=")(1).toInt
-    // itcmSizeKBytes, and dtcmSizeKBytes replace highmem flag
-    // if highmem is needed, set both tcm sizes to 1024
-    } else if (arg.startsWith("--itcmSizeKBytes")) {
-      p.itcmSizeKBytes = arg.split("=")(1).toInt
-    } else if (arg.startsWith("--dtcmSizeKBytes")) {
-      p.dtcmSizeKBytes = arg.split("=")(1).toInt
+    } else if (arg.startsWith("--tcmHighmem")) {
+      p.tcmHighmem = true
+    } else if (arg.startsWith("--standaloneBoot")) {
+      p.standaloneBoot = arg.split("=")(1).toBoolean
     } else if (arg.startsWith("--useAxi")) {
       useAxi = true
     } else if (arg.startsWith("--useTlul")) {
@@ -130,34 +128,21 @@ object EmitCore extends App {
   }
   assert(!(useAxi && useTlul))
 
-  val finalModuleName = if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesDefault && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesDefault) {
-    moduleName
-  } else if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesHighmem && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesHighmem) {
-    s"${moduleName}Highmem"
-  } else {
-    s"${moduleName}_ITCM${p.itcmSizeKBytes}KB_DTCM${p.dtcmSizeKBytes}KB"
-  }
-
-  val memoryRegions = if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesDefault && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesDefault) {
-    MemoryRegions.default
-  } else {
-    MemoryRegions.highmem(p.itcmSizeKBytes, p.dtcmSizeKBytes)
-  }
-
+  val memoryRegions = if (p.tcmHighmem) { MemoryRegions.tcmHighmem } else { MemoryRegions.default }
   // The core module must be created in the ChiselStage context. Use lazy here
   // so it's created in ChiselStage, but referencable afterwards.
   lazy val core = if (useAxi) {
     p.m = memoryRegions
-    new CoreAxi(p, finalModuleName)
+    new CoreAxi(p, moduleName)
   } else if (useTlul) {
     p.m = memoryRegions
-    new CoreTlul(p, finalModuleName)
+    new CoreTlul(p, moduleName)
   } else {
     // "Matcha" memory layout
     p.m = Seq(
       new MemoryRegion(0x0, 0x400000, MemoryRegionType.DMEM),
     )
-    new Core(p, finalModuleName)
+    new Core(p, moduleName)
   }
 
   val firtoolOpts = Array(

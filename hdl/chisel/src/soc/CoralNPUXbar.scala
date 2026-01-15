@@ -19,7 +19,6 @@ import chisel3.util.{MixedVec, MuxCase}
 import bus._
 import bus.TlulWidthBridge
 import coralnpu.Parameters
-import coralnpu.MemorySize
 
 /**
  * A dynamically generated IO bundle for the CoralNPUXbar.
@@ -30,8 +29,8 @@ import coralnpu.MemorySize
  * @param hostParams A sequence of TileLink parameters, one for each host.
  * @param deviceParams A sequence of TileLink parameters, one for each device.
  */
-class CoralNPUXbarIO(val hostParams: Seq[bus.TLULParameters], val deviceParams: Seq[bus.TLULParameters], val enableTestHarness: Boolean, val itcmSize: MemorySize, val dtcmSize: MemorySize) extends Bundle {
-  val cfg = CrossbarConfig(itcmSize, dtcmSize)
+class CoralNPUXbarIO(val hostParams: Seq[bus.TLULParameters], val deviceParams: Seq[bus.TLULParameters], val enableTestHarness: Boolean, val enableHighmem: Boolean) extends Bundle {
+  val cfg = CrossbarConfig(enableHighmem)
 
   // --- Host (Master) Ports ---
   val hosts = Flipped(MixedVec(hostParams.map(p => new OpenTitanTileLink.Host2Device(p))))
@@ -65,17 +64,17 @@ class CoralNPUXbarIO(val hostParams: Seq[bus.TLULParameters], val deviceParams: 
  *
  * @param p The TileLink UL parameters for the bus.
  */
-class CoralNPUXbar(val hostParams: Seq[bus.TLULParameters], val deviceParams: Seq[bus.TLULParameters], val enableTestHarness: Boolean, val itcmSize: MemorySize, val dtcmSize: MemorySize) extends Module {
+class CoralNPUXbar(val hostParams: Seq[bus.TLULParameters], val deviceParams: Seq[bus.TLULParameters], val enableTestHarness: Boolean, val enableHighmem: Boolean) extends Module {
   override val desiredName = if (enableTestHarness) "CoralNPUXbarTestHarness" else "CoralNPUXbar"
   // Load the single source of truth for the crossbar configuration.
-  val cfg = CrossbarConfig(itcmSize, dtcmSize)
+  val cfg = CrossbarConfig(enableHighmem)
 
   // Create simple maps from name to index for easy port access.
   val hostMap = cfg.hosts(enableTestHarness).map(_.name).zipWithIndex.toMap
   val deviceMap = cfg.devices.map(_.name).zipWithIndex.toMap
 
   // Instantiate the dynamically generated IO bundle.
-  val io = IO(new CoralNPUXbarIO(hostParams, deviceParams, enableTestHarness, itcmSize, dtcmSize))
+  val io = IO(new CoralNPUXbarIO(hostParams, deviceParams, enableTestHarness, enableHighmem))
 
   // Find all unique clock domains from the config, excluding the main one.
   val asyncDeviceDomains = cfg.devices.map(_.clockDomain).distinct.filter(_ != "main")
@@ -254,7 +253,6 @@ import _root_.circt.stage.{ChiselStage, FirtoolOption}
 import chisel3.stage.ChiselGeneratorAnnotation
 import coralnpu.Parameters
 import scala.annotation.nowarn
-import coralnpu.MemorySize
 
 /**
  * A standalone main object to generate the SystemVerilog for the CoralNPUXbar.
@@ -284,7 +282,7 @@ object CoralNPUXbarEmitter extends App {
     Array("--target", "systemverilog") ++ chiselArgs,
     Seq(
       ChiselGeneratorAnnotation(() =>
-        new CoralNPUXbar(hostParams, deviceParams, enableTestHarness, MemorySize.fromKBytes(Parameters.itcmSizeKBytesDefault), MemorySize.fromKBytes(Parameters.dtcmSizeKBytesDefault))
+        new CoralNPUXbar(hostParams, deviceParams, enableTestHarness, false)
       )
     ) ++ Seq(FirtoolOption("-enable-layers=Verification"))
   )
