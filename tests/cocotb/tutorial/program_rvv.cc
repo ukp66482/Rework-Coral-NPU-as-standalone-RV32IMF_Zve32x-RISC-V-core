@@ -13,15 +13,30 @@
 // limitations under the License.
 
 #include <stdint.h>
+#include <riscv_vector.h>
 
 uint32_t input1_buffer[8] __attribute__((section(".data")));
 uint32_t input2_buffer[8] __attribute__((section(".data")));
 uint32_t output_buffer[8] __attribute__((section(".data")));
 
 int main(int argc, char** argv) {
-for (int i = 0; i < 8; i++) {
-  output_buffer[i] = input1_buffer[i] + input2_buffer[i];
-}
-return 0;
-}
+  size_t avl = 8;
+  size_t vl;
+  uint32_t* ptr_in1 = input1_buffer;
+  uint32_t* ptr_in2 = input2_buffer;
+  uint32_t* ptr_out = output_buffer;
 
+  while (avl > 0) {
+    vl = __riscv_vsetvl_e32m1(avl);
+    vuint32m1_t v1 = __riscv_vle32_v_u32m1(ptr_in1, vl);
+    vuint32m1_t v2 = __riscv_vle32_v_u32m1(ptr_in2, vl);
+    vuint32m1_t vsum = __riscv_vadd_vv_u32m1(v1, v2, vl);
+    __riscv_vse32_v_u32m1(ptr_out, vsum, vl);
+    
+    ptr_in1 += vl;
+    ptr_in2 += vl;
+    ptr_out += vl;
+    avl -= vl;
+  }
+  return 0;
+}

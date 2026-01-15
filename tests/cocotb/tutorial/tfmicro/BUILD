@@ -31,8 +31,7 @@ coralnpu_v2_binary(
         "run_mobilenet.cc",
     ],
     hdrs = ["mobilenet_v1_025_partial_layers.h"],
-    itcm_size_kbytes = 1024,  # Highmem
-    dtcm_size_kbytes = 1024,  # Highmem
+    linker_script = "@coralnpu_hw//toolchain:coralnpu_tcm_highmem.ld",
     deps = [
         "//sw/opt/litert-micro:depthwise_conv",
         "@tflite_micro//tensorflow/lite/micro:micro_framework",
@@ -72,7 +71,7 @@ cocotb_test_suite(
     tests_kwargs = {
         "waves": False,
         "tags" : ["manual"],
-        "hdl_toplevel": "RvvCoreMini_ITCM1024KB_DTCM1024KBAxi",
+        "hdl_toplevel": "RvvCoreMiniHighmemAxi",
         "seed": "42",
         "size": "enormous",
         "test_module": ["cocotb_run_mobilenet_v1.py"],
@@ -110,13 +109,13 @@ cocotb_test_suite(
         "vcs",
     ],
     testcases = [
-        "test_dwconv8to8stride1",
-        "test_dwconv8to8stride2",
-        ("test_dwconv32to32stride1", "large"),
-        ("test_dwconv32to32stride2", "large"),
+        ("test_dwconv8to8stride1", "medium"),
+        ("test_dwconv8to8stride2", "medium"),
+        "test_dwconv32to32stride1",
+        "test_dwconv32to32stride2",
         ("test_dwconv64to64stride1", "large"),
         ("test_dwconv64to64stride2", "large"),
-        ("test_dwconv16to32stride2", "large"),
+        "test_dwconv16to32stride2",
         # Benchmarks are skipped.
     ],
     # testcases_vname = "RUN_MOBILENET_TEST",
