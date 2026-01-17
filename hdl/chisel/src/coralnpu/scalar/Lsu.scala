@@ -933,9 +933,12 @@ class LsuV2(p: Parameters) extends Lsu(p) {
   io.dbus.wmask := Cat(wmask.reverse)
 
   // ebus data path
-  io.ebus.dbus.valid := (external || peri) && Mux(slot.store,
+  // Allow stores to ITCM to go out via ebus (to support Loopback/Self-programming)
+  io.ebus.dbus.valid := ((external || peri) && Mux(slot.store,
                                                   slot.activeTransaction(),
-                                                  loadUpdatedSlot.activeTransaction()) && !faultReg.valid
+                                                  loadUpdatedSlot.activeTransaction()) && !faultReg.valid) || 
+                        (itcm && slot.store && slot.activeTransaction() && !faultReg.valid)
+                        
   io.ebus.dbus.write := slot.store
   io.ebus.dbus.addr := alignedAddress
   io.ebus.dbus.adrx := targetLineAddr

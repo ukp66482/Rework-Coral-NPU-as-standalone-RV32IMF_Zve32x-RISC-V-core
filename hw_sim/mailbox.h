@@ -15,6 +15,8 @@
 #ifndef HW_SIM_MAILBOX_H_
 #define HW_SIM_MAILBOX_H_
 
+#include <cstdint>
+
 struct CoralNPUMailbox {
   uint32_t message[4] = {0, 0, 0, 0};
 };

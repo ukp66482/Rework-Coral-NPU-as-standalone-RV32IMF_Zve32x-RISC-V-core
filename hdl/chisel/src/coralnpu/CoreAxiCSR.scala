@@ -45,9 +45,10 @@ class CoreCSR(p: Parameters) extends Module {
 
   // Bit 0 - Reset (Active High)
   // Bit 1 - Clock Gate (Active High)
-  // By default, be in reset and with the clock gated.
-  val resetReg = RegInit(3.U(p.fetchAddrBits.W))
-  val pcStartReg = RegInit(0.U(p.fetchAddrBits.W))
+  // By default, be NOT in reset and with the clock RUNNING (0).
+  val resetReg = RegInit(0.U(p.fetchAddrBits.W))
+  // Initialize PC Start address to the reset vector (e.g. BootROM base)
+  val pcStartReg = RegInit(p.resetVector.U(p.fetchAddrBits.W))
   val statusReg = RegInit(0.U(p.fetchAddrBits.W))
 
   // Debug module registers, conditionally present.

@@ -118,6 +118,10 @@ object EmitCore extends App {
       p.itcmSizeKBytes = arg.split("=")(1).toInt
     } else if (arg.startsWith("--dtcmSizeKBytes")) {
       p.dtcmSizeKBytes = arg.split("=")(1).toInt
+    } else if (arg.startsWith("--resetVector")) {
+      p.resetVector = Integer.decode(arg.split("=")(1)).toInt
+    } else if (arg.startsWith("--bootRomFile")) {
+      p.bootRomFile = arg.split("=")(1)
     } else if (arg.startsWith("--useAxi")) {
       useAxi = true
     } else if (arg.startsWith("--useTlul")) {

@@ -175,7 +175,9 @@ class FetchControl(p: Parameters) extends Module {
     // PC is initialized with the CSR value below upon leaving reset.
     val pc = RegInit(MakeInvalid(UInt(32.W)))
     val pcNext = MuxCase(pc.bits, Seq(
-        (!pc.valid) -> Cat(io.csr.value(0)(31,2), 0.U(2.W)),  // We're leaving reset.
+        // When leaving reset (!pc.valid), jump to resetVector directly if p.resetVector is set,
+        // otherwise rely on CSR (which we also updated to default to resetVector).
+        (!pc.valid) -> Cat(p.resetVector.U(32.W)(31,2), 0.U(2.W)),
         io.iflush.valid -> io.iflush.bits,
         io.branch.valid -> io.branch.bits,
         writeToBuffer -> predecode.nextPc,

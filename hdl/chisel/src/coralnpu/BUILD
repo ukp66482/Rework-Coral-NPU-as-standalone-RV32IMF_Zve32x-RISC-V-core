@@ -327,6 +327,7 @@ chisel_library(
     name = "coralnpu",
     srcs = [
         "AxiSlave.scala",
+        "BootROM.scala",
         "Core.scala",
         "CoreAxi.scala",
         "CoreAxiCSR.scala",

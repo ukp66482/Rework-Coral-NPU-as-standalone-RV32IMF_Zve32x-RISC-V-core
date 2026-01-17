@@ -185,6 +185,6 @@ def chisel_cc_library(
         module_top = module_name,
         visibility = ["//visibility:public"],
         # TODO(derekjchow): Re-enable the default -Wall?
-        vopts = vopts + ["--pins-bv", "2"],
+        vopts = vopts + ["--pins-bv", "2", "-DENABLE_INITIAL_MEM_"],
         systemc = False,
     )

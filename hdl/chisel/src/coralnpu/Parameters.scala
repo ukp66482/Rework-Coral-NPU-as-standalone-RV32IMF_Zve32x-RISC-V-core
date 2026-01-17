@@ -21,6 +21,7 @@ import scala.collection.mutable.StringBuilder
 object MemoryRegionType extends ChiselEnum {
   val IMEM = Value
   val DMEM = Value
+  val BootROM = Value
   val Peripheral = Value
   val External = Value
 }
@@ -43,6 +44,7 @@ object MemoryRegions {
     new MemoryRegion(0x0000000, 0x00002000, MemoryRegionType.IMEM), // ITCM
     new MemoryRegion(0x0010000, 0x00008000, MemoryRegionType.DMEM), // DTCM
     new MemoryRegion(0x0030000, 0x00001000, MemoryRegionType.Peripheral), // CSR
+    new MemoryRegion(0x00040000, 0x00002000, MemoryRegionType.BootROM), // BootROM
   )
   def highmem(itcmSizeKBytes: Int, dtcmSizeKBytes: Int) = Seq(
     // The DTCM and CSR base addresses are deliberately offset in `highmem`
@@ -50,6 +52,7 @@ object MemoryRegions {
     new MemoryRegion(0x00000000, itcmSizeKBytes * 1024, MemoryRegionType.IMEM), // ITCM
     new MemoryRegion(0x00100000, dtcmSizeKBytes * 1024, MemoryRegionType.DMEM), // DTCM
     new MemoryRegion(0x00200000, 0x00001000, MemoryRegionType.Peripheral), // CSR
+    new MemoryRegion(0x00210000, 0x00002000, MemoryRegionType.BootROM), // BootROM (8KB)
   )
 }
 
@@ -68,6 +71,8 @@ object Parameters {
 
 class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0) {
   // Machine.
+  // The reset vector, where the PC starts after reset.
+  var resetVector = 0x0
   val programCounterBits = 32
   val instructionBits = 32
   val instructionLanes = 4
@@ -154,6 +159,8 @@ class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0) {
   // If set, itcmMemoryFile should contain a path to a Verilog mem file.
   // NB: Only used by CoreAxi
   val itcmMemoryFile = ""
+  // If set, bootRomFile should contain a path to a Verilog mem file for the BootROM.
+  var bootRomFile = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot.hex"
 
   val csrInCount = 13
   val csrOutCount = 9
@@ -176,6 +183,7 @@ object EmitParametersHeader {
     builder = builder.append("\n")
     builder = builder.append("#include <stdbool.h>\n")
     builder = builder.append("\n")
+    builder = builder.append(s"#define KP_resetVector ${p.resetVector}\n")
     fields.foreach { x =>
       val fieldMirror = instanceMirror.reflectField(x.asTerm)
       val fieldType = x.asTerm.typeSignature

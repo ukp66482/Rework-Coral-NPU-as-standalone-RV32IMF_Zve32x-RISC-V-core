@@ -40,7 +40,8 @@ class Fetch(p: Parameters) extends FetchUnit(p) {
   assert(p.fetchDataBits == 256)
 
   val aslice = Slice(UInt(p.fetchAddrBits.W), true)
-  val readAddr = Reg(UInt(p.fetchAddrBits.W))
+  // Initialize readAddr to reset vector so first fetch is correct
+  val readAddr = RegInit(p.resetVector.U(p.fetchAddrBits.W))
   val readDataEn = RegInit(false.B)
 
   val readAddrEn = io.ibus.valid && io.ibus.ready
@@ -78,7 +79,7 @@ class Fetch(p: Parameters) extends FetchUnit(p) {
 
   // Instruction outputs.
   val instValid = RegInit(VecInit(Seq.fill(p.instructionLanes)(false.B)))
-  val instAddr  = Reg(Vec(p.instructionLanes, UInt(p.instructionBits.W)))
+  val instAddr  = RegInit(VecInit(Seq.fill(p.instructionLanes)(p.resetVector.U(p.instructionBits.W))))
   val instBits  = Reg(Vec(p.instructionLanes, UInt(p.instructionBits.W)))
 
   val instAligned0 = Cat(instAddr(0)(31, indexLsb), 0.U(indexLsb.W))

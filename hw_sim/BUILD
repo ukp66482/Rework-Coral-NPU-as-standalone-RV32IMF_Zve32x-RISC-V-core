@@ -61,6 +61,10 @@ cc_library(
         "coralnpu_simulator.h",
         "mailbox.h",
     ],
+    deps = [
+        ":hw_primitives",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -72,6 +76,7 @@ cc_library(
         ":coralnpu_simulator_headers",
     ],
     alwayslink = True,
+    visibility = ["//visibility:public"],
 )
 
 cc_library(

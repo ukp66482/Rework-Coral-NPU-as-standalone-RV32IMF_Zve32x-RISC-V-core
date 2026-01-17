@@ -125,17 +125,28 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     itcmWrapper.io.sram.readData := itcm.io.rdata
     val itcmArbiter = Module(new FabricArbiter(p))
     itcmArbiter.io.port <> itcmWrapper.io.fabric
+    
+    // Logic for IBus routing (ITCM vs BootROM)
+    val bootRomRData = Wire(UInt(p.axi2DataBits.W))
+    val isBootRomFetch = Wire(Bool())
+    // Note: BootROM check logic is defined later when we know if BootROM exists
+    
     itcmArbiter.io.source(0).readDataAddr := MakeValid(
-        core.io.ibus.valid, core.io.ibus.addr)
+        core.io.ibus.valid && !isBootRomFetch, core.io.ibus.addr)
     itcmArbiter.io.source(0).writeDataAddr :=
         MakeInvalid(UInt(p.axi2AddrBits.W))
     itcmArbiter.io.source(0).writeDataBits := 0.U
     itcmArbiter.io.source(0).writeDataStrb := 0.U
-    core.io.ibus.rdata := itcmArbiter.io.source(0).readData.bits
+    
+    // Mux IBus return data (assuming 1 cycle latency for both ITCM and BootROM)
+    core.io.ibus.rdata := Mux(RegNext(isBootRomFetch), bootRomRData, itcmArbiter.io.source(0).readData.bits)
     core.io.ibus.ready := true.B  // Can always read from TCM
+    
     /// Connect fault for the ibus.
+    // Fault if Valid AND Not ITCM AND Not BootROM
+    // ITCM is region 0. BootROM is region 3 (if exists).
     core.io.ibus.fault.valid :=
-        core.io.ibus.valid && !(memoryRegions(0).contains(core.io.ibus.addr))
+        core.io.ibus.valid && !(memoryRegions(0).contains(core.io.ibus.addr) || isBootRomFetch)
     core.io.ibus.fault.bits.write := false.B
     core.io.ibus.fault.bits.addr := 0.U
     core.io.ibus.fault.bits.epc := core.io.ibus.addr
@@ -173,6 +184,30 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     fabricMux.io.periBusy(1) := dtcmArbiter.io.fabricBusy
     fabricMux.io.ports(2) <> csr.io.fabric
     fabricMux.io.periBusy(2) := false.B
+
+    if (memoryRegions.length > 3) {
+      val bootRom = Module(new BootROM(p))
+      val bootRomArbiter = Module(new FabricArbiter(p))
+      bootRomArbiter.io.port <> bootRom.io.fabric
+
+      isBootRomFetch := memoryRegions(3).contains(core.io.ibus.addr)
+      
+      // Port 0: CPU Fetch
+      bootRomArbiter.io.source(0).readDataAddr := MakeValid(
+        core.io.ibus.valid && isBootRomFetch, core.io.ibus.addr)
+      bootRomArbiter.io.source(0).writeDataAddr := MakeInvalid(UInt(p.axi2AddrBits.W))
+      bootRomArbiter.io.source(0).writeDataBits := 0.U
+      bootRomArbiter.io.source(0).writeDataStrb := 0.U
+      
+      bootRomRData := bootRomArbiter.io.source(0).readData.bits
+
+      // Port 1: Host Access (via FabricMux)
+      bootRomArbiter.io.source(1) <> fabricMux.io.ports(3)
+      fabricMux.io.periBusy(3) := bootRomArbiter.io.fabricBusy
+    } else {
+      isBootRomFetch := false.B
+      bootRomRData := 0.U
+    }
 
     // Create AXI Slave interface and connect internal fabric to AXI
     val axiSlave = Module(new AxiSlave(p))

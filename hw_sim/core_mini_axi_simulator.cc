@@ -21,11 +21,17 @@ class CoreMiniAxiSimulator : public CoralNPUSimulator {
  public:
   CoreMiniAxiSimulator() : context_(), wrapper_(&context_) {
     auto read_cb = [this](const AxiAddr& axi_addr) {
+      if (this->user_read_callback_) {
+        return this->user_read_callback_(axi_addr);
+      }
       return this->ReadCallback(axi_addr);
     };
     wrapper_.RegisterReadCallback(read_cb);
 
     auto write_cb = [this](const AxiAddr& axi_addr, const AxiWData& axi_data) {
+      if (this->user_write_callback_) {
+        return this->user_write_callback_(axi_addr, axi_data);
+      }
       return this->WriteCallback(axi_addr, axi_data);
     };
     wrapper_.RegisterWriteCallback(write_cb);
@@ -33,6 +39,13 @@ class CoreMiniAxiSimulator : public CoralNPUSimulator {
     wrapper_.Reset();
   }
   ~CoreMiniAxiSimulator() final = default;
+
+  void RegisterReadCallback(std::function<AxiRData(const AxiAddr&)> callback) final {
+     user_read_callback_ = callback;
+  }
+  void RegisterWriteCallback(std::function<AxiWResp(const AxiAddr&, const AxiWData&)> callback) final {
+     user_write_callback_ = callback;
+  }
 
   void ReadTCM(uint32_t addr, size_t size, char* data) final;
   const CoralNPUMailbox& ReadMailbox(void) final;
@@ -44,6 +57,9 @@ class CoreMiniAxiSimulator : public CoralNPUSimulator {
  private:
   VerilatedContext context_;
   CoreMiniAxiWrapper wrapper_;
+  
+  std::function<AxiRData(const AxiAddr&)> user_read_callback_;
+  std::function<AxiWResp(const AxiAddr&, const AxiWData&)> user_write_callback_;
 
   AxiWResp WriteCallback(const AxiAddr&, const AxiWData&);
   AxiRData ReadCallback(const AxiAddr&);

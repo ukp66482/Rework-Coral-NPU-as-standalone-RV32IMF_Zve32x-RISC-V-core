@@ -15,13 +15,20 @@
 #ifndef HW_SIM_CORALNPU_SIMULATOR_H_
 #define HW_SIM_CORALNPU_SIMULATOR_H_
 
+#include <cstdint>
+#include <cstddef>
+#include <functional>
 #include "hw_sim/mailbox.h"
+#include "hw_sim/hw_primitives.h"
 
 class CoralNPUSimulator {
  public:
   static CoralNPUSimulator* Create();
 
   virtual ~CoralNPUSimulator() = default;
+
+  virtual void RegisterReadCallback(std::function<AxiRData(const AxiAddr&)> callback) = 0;
+  virtual void RegisterWriteCallback(std::function<AxiWResp(const AxiAddr&, const AxiWData&)> callback) = 0;
 
   // Functions for reading/writing TCMs and Mailbox.
   virtual void ReadTCM(uint32_t addr, size_t size, char* data) = 0;
