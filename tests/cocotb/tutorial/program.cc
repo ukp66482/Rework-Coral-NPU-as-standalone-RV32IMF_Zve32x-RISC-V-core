@@ -14,14 +14,20 @@
 
 #include <stdint.h>
 
-uint32_t input1_buffer[8] __attribute__((section(".data")));
-uint32_t input2_buffer[8] __attribute__((section(".data")));
-uint32_t output_buffer[8] __attribute__((section(".data")));
+// Addresses start at 0x10100 to avoid CRT magic number at 0x10000
+#define INPUT1_ADDR 0x10100
+#define INPUT2_ADDR 0x10120
+#define OUTPUT_ADDR 0x10140
+#define COUNT 8
 
 int main(int argc, char** argv) {
-for (int i = 0; i < 8; i++) {
-  output_buffer[i] = input1_buffer[i] + input2_buffer[i];
-}
-return 0;
+  volatile uint32_t* input1 = (volatile uint32_t*)INPUT1_ADDR;
+  volatile uint32_t* input2 = (volatile uint32_t*)INPUT2_ADDR;
+  volatile uint32_t* output = (volatile uint32_t*)OUTPUT_ADDR;
+
+  for (int i = 0; i < COUNT; i++) {
+    output[i] = input1[i] + input2[i];
+  }
+  return 0;
 }
 

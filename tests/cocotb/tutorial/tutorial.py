@@ -30,5 +30,6 @@ async def core_mini_axi_tutorial(dut):
     await core_mini_axi.execute_from(entry_point)
     await core_mini_axi.wait_for_halted()
 
+
     rdata = (await core_mini_axi.read(outputs_addr, 4 * 8)).view(np.uint32)
     print(f"I got {rdata}")
