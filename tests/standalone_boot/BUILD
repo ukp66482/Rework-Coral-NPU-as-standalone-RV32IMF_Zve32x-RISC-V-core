@@ -12,12 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+# Default configuration test (ITCM 8KB, Mailbox @ 0x30000)
 cc_binary(
     name = "boot_test",
     srcs = ["boot_test.cc"],
     deps = [
         "//hw_sim:core_mini_axi_simulator",
+        "//hw_sim:coralnpu_simulator_headers",
+    ],
+)
+
+# HighMem configuration test (ITCM 1MB, Mailbox @ 0x200000)
+cc_binary(
+    name = "boot_test_highmem",
+    srcs = ["boot_test_common.cc"],
+    copts = ["-DHIGHMEM_CONFIG"],
+    deps = [
+        "//hw_sim:core_mini_axi_simulator_highmem",
         "//hw_sim:coralnpu_simulator_headers",
     ],
 )

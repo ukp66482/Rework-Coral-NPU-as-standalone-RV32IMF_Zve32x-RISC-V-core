@@ -22,10 +22,19 @@
 #include "hw_sim/hw_primitives.h"
 #include "hw_sim/mailbox.h"
 
-#ifdef ENABLE_RVV
+// Select the appropriate Verilator model based on configuration
+#if defined(ENABLE_RVV) && defined(HIGHMEM_CONFIG)
+#include "VRvvCoreMiniHighmemAxi.h"
+using CoreModel = VRvvCoreMiniHighmemAxi;
+#elif defined(ENABLE_RVV)
 #include "VRvvCoreMiniAxi.h"
+using CoreModel = VRvvCoreMiniAxi;
+#elif defined(HIGHMEM_CONFIG)
+#include "VCoreMiniHighmemAxi.h"
+using CoreModel = VCoreMiniHighmemAxi;
 #else
 #include "VCoreMiniAxi.h"
+using CoreModel = VCoreMiniAxi;
 #endif
 
 class CoreMiniAxiWrapper {
@@ -218,11 +227,7 @@ class CoreMiniAxiWrapper {
  private:
   VerilatedContext* const context_;
   CoralNPUMailbox mailbox_;
-#ifdef ENABLE_RVV
-  VRvvCoreMiniAxi core_;
-#else
-  VCoreMiniAxi core_;
-#endif
+  CoreModel core_;
   Clock clock_;
   AxiSlaveWriteDriver slave_write_driver_;
   AxiSlaveReadDriver slave_read_driver_;

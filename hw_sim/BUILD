@@ -41,6 +41,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "core_mini_axi_wrapper_highmem",
+    hdrs = [
+        "core_mini_axi_wrapper.h",
+        "mailbox.h",
+    ],
+    defines = ["HIGHMEM_CONFIG"],
+    deps = [
+        ":hw_primitives",
+        "//hdl/chisel/src/coralnpu:core_mini_highmem_axi_cc_library_cc",
+        "//hdl/chisel/src/coralnpu:rvv_core_mini_highmem_axi_cc_library_cc",
+    ],
+)
+
 cc_binary(
     name = "core_mini_axi_wrapper_example",
     srcs = [
@@ -73,6 +87,19 @@ cc_library(
     linkstatic = True,
     deps = [
         ":core_mini_axi_wrapper",
+        ":coralnpu_simulator_headers",
+    ],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "core_mini_axi_simulator_highmem",
+    srcs = ["core_mini_axi_simulator.cc"],
+    copts = ["-DHIGHMEM_CONFIG"],
+    linkstatic = True,
+    deps = [
+        ":core_mini_axi_wrapper_highmem",
         ":coralnpu_simulator_headers",
     ],
     alwayslink = True,

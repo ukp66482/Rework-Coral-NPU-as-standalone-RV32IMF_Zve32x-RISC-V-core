@@ -61,6 +61,15 @@ object Parameters {
   val dtcmSizeKBytesDefault = 32    // default dtcm size for current IP design
   val itcmSizeKBytesHighmem = 1024
   val dtcmSizeKBytesHighmem = 1024
+  
+  // BootROM file paths for each configuration
+  val bootRomFileDefault = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_default.hex"
+  val bootRomFileHighmem = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_highmem.hex"
+  
+  // Reset vectors for each configuration (BootROM base addresses)
+  val resetVectorDefault = 0x00040000  // BootROM @ 0x40000
+  val resetVectorHighmem = 0x00210000  // BootROM @ 0x210000
+  
   def apply(): Parameters = {
     return new Parameters()
   }
@@ -160,7 +169,33 @@ class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0) {
   // NB: Only used by CoreAxi
   val itcmMemoryFile = ""
   // If set, bootRomFile should contain a path to a Verilog mem file for the BootROM.
-  var bootRomFile = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot.hex"
+  // Use boot_default.hex or boot_highmem.hex depending on memory configuration.
+  var bootRomFile = Parameters.bootRomFileDefault
+
+  // Helper to check if using highmem configuration based on memory regions
+  def isHighmem: Boolean = {
+    m.find(_.memType == MemoryRegionType.BootROM).map(_.memStart).getOrElse(0x40000) >= 0x200000
+  }
+  
+  // Get the BootROM base address from memory regions
+  def bootRomBase: Int = {
+    m.find(_.memType == MemoryRegionType.BootROM).map(_.memStart).getOrElse(0x40000)
+  }
+  
+  // Get the ITCM size from memory regions
+  def itcmSize: Int = {
+    m.find(_.memType == MemoryRegionType.IMEM).map(_.memSize).getOrElse(0x2000)
+  }
+  
+  // Get the DTCM base address from memory regions  
+  def dtcmBase: Int = {
+    m.find(_.memType == MemoryRegionType.DMEM).map(_.memStart).getOrElse(0x10000)
+  }
+  
+  // Get the CSR base address from memory regions
+  def csrBase: Int = {
+    m.find(_.memType == MemoryRegionType.Peripheral).map(_.memStart).getOrElse(0x30000)
+  }
 
   val csrInCount = 13
   val csrOutCount = 9

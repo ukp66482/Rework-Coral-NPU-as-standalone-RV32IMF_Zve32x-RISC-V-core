@@ -134,18 +134,29 @@ object EmitCore extends App {
   }
   assert(!(useAxi && useTlul))
 
-  val finalModuleName = if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesDefault && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesDefault) {
+  val isDefaultConfig = p.itcmSizeKBytes == Parameters.itcmSizeKBytesDefault && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesDefault
+
+  val finalModuleName = if (isDefaultConfig) {
     moduleName
   } else if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesHighmem && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesHighmem) {
     s"${moduleName}Highmem"
   } else {
     s"${moduleName}_ITCM${p.itcmSizeKBytes}KB_DTCM${p.dtcmSizeKBytes}KB"
   }
-
-  val memoryRegions = if (p.itcmSizeKBytes == Parameters.itcmSizeKBytesDefault && p.dtcmSizeKBytes == Parameters.dtcmSizeKBytesDefault) {
+  
+  val memoryRegions = if (isDefaultConfig) {
     MemoryRegions.default
   } else {
     MemoryRegions.highmem(p.itcmSizeKBytes, p.dtcmSizeKBytes)
+  }
+  
+  // Set resetVector and bootRomFile based on configuration (if not explicitly set via --resetVector or --bootRomFile)
+  // For default config: BootROM @ 0x40000, for highmem: BootROM @ 0x210000
+  if (p.resetVector == 0x0) { // Only set if not explicitly overridden
+    p.resetVector = if (isDefaultConfig) Parameters.resetVectorDefault else Parameters.resetVectorHighmem
+  }
+  if (p.bootRomFile == Parameters.bootRomFileDefault && !isDefaultConfig) {
+    p.bootRomFile = Parameters.bootRomFileHighmem
   }
 
   // The core module must be created in the ChiselStage context. Use lazy here
