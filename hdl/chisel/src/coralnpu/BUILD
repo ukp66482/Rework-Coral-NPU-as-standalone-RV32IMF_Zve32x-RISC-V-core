@@ -741,3 +741,35 @@ chisel_cc_library(
         "//hdl/verilog:sram_1rw_256x256",
     ],
 )
+
+
+chisel_cc_library(
+    name = "core_mini_axi_standalone_cc_library",
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.EmitCore",
+    extra_outs = [
+        "VCoreMiniStandaloneAxi_parameters.h",
+        "CoreMiniStandaloneAxi.zip",
+    ],
+    gen_flags = [
+        "--enableFetchL0=False",
+        "--fetchDataBits=128",
+        "--lsuDataBits=128",
+        "--enableFloat=True",
+        "--moduleName=CoreMiniStandalone",
+        "--useAxi",
+        "--standaloneBoot=True",
+    ],
+    module_name = "CoreMiniStandaloneAxi",
+    verilog_file_path = "CoreMiniStandaloneAxi.sv",
+    vopts = [
+        "-DUSE_GENERIC",
+        "-DCORALNPU_STANDALONE_TCM_INIT",
+        # Warnings that we disable for fpnew
+        "-Wno-UNOPTFLAT",
+        "-Wno-ASCRANGE",
+        "-Wno-WIDTHEXPAND",
+        "-Wno-WIDTHTRUNC",
+        "-Wno-UNSIGNED",
+    ],
+)
