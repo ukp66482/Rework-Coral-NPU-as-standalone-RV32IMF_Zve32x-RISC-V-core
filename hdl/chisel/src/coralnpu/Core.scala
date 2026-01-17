@@ -150,11 +150,13 @@ object EmitCore extends App {
     MemoryRegions.highmem(p.itcmSizeKBytes, p.dtcmSizeKBytes)
   }
   
-  // Set resetVector and bootRomFile based on configuration (if not explicitly set via --resetVector or --bootRomFile)
-  // For default config: BootROM @ 0x40000, for highmem: BootROM @ 0x210000
-  if (p.resetVector == 0x0) { // Only set if not explicitly overridden
-    p.resetVector = if (isDefaultConfig) Parameters.resetVectorDefault else Parameters.resetVectorHighmem
-  }
+  // NOTE: resetVector and bootRomFile are NOT automatically set.
+  // - Default resetVector = 0x0 (ITCM) for normal test/simulation mode
+  // - For BootROM mode (standalone boot), explicitly pass:
+  //   --resetVector=0x40000 (default config) or --resetVector=0x210000 (highmem)
+  // - bootRomFile defaults to boot_default.hex; for highmem, pass --bootRomFile=.../boot_highmem.hex
+  
+  // Auto-select bootRomFile based on memory config (but NOT resetVector)
   if (p.bootRomFile == Parameters.bootRomFileDefault && !isDefaultConfig) {
     p.bootRomFile = Parameters.bootRomFileHighmem
   }

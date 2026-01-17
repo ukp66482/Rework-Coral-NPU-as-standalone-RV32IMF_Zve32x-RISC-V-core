@@ -70,6 +70,14 @@ verilator_cocotb_model(
 )
 
 verilator_cocotb_model(
+    name = "core_mini_highmem_axi_model",
+    trace = False,
+    cflags = VERILATOR_BUILD_ARGS,
+    hdl_toplevel = "CoreMiniHighmemAxi",
+    verilog_source = "//hdl/chisel/src/coralnpu:CoreMiniHighmemAxi.sv",
+)
+
+verilator_cocotb_model(
     name = "rvv_core_mini_highmem_axi_model",
     trace = False,
     cflags = VERILATOR_BUILD_ARGS,
