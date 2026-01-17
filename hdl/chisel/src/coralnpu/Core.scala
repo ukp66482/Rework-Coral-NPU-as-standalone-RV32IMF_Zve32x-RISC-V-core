@@ -112,6 +112,9 @@ object EmitCore extends App {
       p.enableDebug = arg.split("=")(1).toBoolean
     } else if (arg.startsWith("--lsuDataBits")) {
       p.lsuDataBits = arg.split("=")(1).toInt
+    } 
+      else if (arg.startsWith("--standaloneBoot")) {
+      p.standaloneBoot = arg.split("=")(1).toBoolean
     // itcmSizeKBytes, and dtcmSizeKBytes replace highmem flag
     // if highmem is needed, set both tcm sizes to 1024
     } else if (arg.startsWith("--itcmSizeKBytes")) {
