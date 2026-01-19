@@ -46,6 +46,16 @@ COCOTB_TEST_BINARY_TARGETS = glob(["**/*.elf"]) + glob(["**/*.o"]) + [
 ]
 
 verilator_cocotb_model(
+    name = "core_mini_axi_standalone_model",
+    trace = False,
+    cflags = VERILATOR_BUILD_ARGS + [
+        "-DCORALNPU_STANDALONE_TCM_INIT",
+    ],
+    hdl_toplevel = "CoreMiniStandaloneAxi",
+    verilog_source = "//hdl/chisel/src/coralnpu:CoreMiniStandaloneAxi.sv",
+)
+
+verilator_cocotb_model(
     name = "core_mini_axi_model",
     trace = False,
     cflags = VERILATOR_BUILD_ARGS,
@@ -351,6 +361,29 @@ cocotb_test_suite(
     vcs_test_args = VCS_TEST_ARGS,
     vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:core_mini_axi_debug_cc_library_verilog"],
     verilator_model = ":core_mini_debug_axi_model",
+)
+
+cocotb_test_suite(
+    name = "core_mini_axi_standalone_boot_cocotb",
+    simulators = [
+        "verilator",
+    ],
+    testcases = [
+        "standalone_boot_writes_dtcm",
+    ],
+    testcases_vname = "CORE_MINI_AXI_STANDALONE_BOOT_TESTCASES",
+    tests_kwargs = {
+        "hdl_toplevel": "CoreMiniStandaloneAxi",
+        "waves": False,
+        "seed": "42",
+        "test_module": ["standalone_boot_test.py"],
+        "deps": [
+            "//coralnpu_test_utils:core_mini_axi_sim_interface",
+        ],
+        "default_testcase_size": "small",
+        "size": "small",
+    },
+    verilator_model = ":core_mini_axi_standalone_model",
 )
 
 cocotb_test_suite(

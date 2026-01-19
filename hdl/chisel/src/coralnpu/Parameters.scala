@@ -146,6 +146,10 @@ class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0) {
   val axiSysAddrBits = 32
   def axiSysDataBits: Int = { lsuDataBits }
 
+  // Standalone boot configuration (no external host required).
+  // If set, core comes out of reset ungated and starts from pcStart=0.
+  var standaloneBoot = false
+
   // [Internal] L1ICache interface.
   val l1islots = 256
   val l1iassoc = 4
