@@ -22,17 +22,17 @@ load(
     "VCS_TEST_ARGS",
 )
 
-# BEGIN_TESTCASES_FOR_tutorial
-TUTORIAL_TESTCASES = [
-    "core_mini_axi_tutorial",
+# BEGIN_TESTCASES_FOR_Scalar
+TEST_SCALAR_TESTCASES = [
+    "core_mini_axi",
 ]
-# END_TESTCASES_FOR_tutorial
+# END_TESTCASES_FOR_Scalar
 
-# BEGIN_TESTCASES_FOR_tutorial_rvv
+# BEGIN_TESTCASES_FOR_RVV
 TEST_RVV_TESTCASES = [
-    "RvvCoreMiniAxi_tutorial",
+    "RvvCoreMiniAxi",
 ]
-# END_TESTCASES_FOR_tutorial_rvv
+# END_TESTCASES_FOR_RVV
 
 
 cocotb_test_suite(
@@ -68,18 +68,18 @@ cocotb_test_suite(
 )
 
 cocotb_test_suite(
-    name = "tutorial",
+    name = "test_scalar",
     simulators = [
         "verilator",
         "vcs",
     ],
-    testcases = TUTORIAL_TESTCASES,
-    testcases_vname = "TUTORIAL_TESTCASES",
+    testcases = TEST_SCALAR_TESTCASES,
+    testcases_vname = "TEST_SCALAR_TESTCASES",
     tests_kwargs = {
         "waves": False,
         "hdl_toplevel": "CoreMiniAxi",
         "seed": "42",
-        "test_module": ["tutorial.py"],
+        "test_module": ["test_scalar.py"],
         "deps": [
             "//coralnpu_test_utils:core_mini_axi_sim_interface",
             "@rules_python//python/runfiles",
