@@ -376,7 +376,7 @@ cocotb_test_suite(
         "hdl_toplevel": "CoreMiniStandaloneAxi",
         "waves": False,
         "seed": "42",
-        "test_module": ["standalone_boot_test.py"],
+        "test_module": ["//tests/cocotb/Standalone_boot:standalone_boot_test.py"],
         "deps": [
             "//coralnpu_test_utils:core_mini_axi_sim_interface",
         ],

@@ -172,12 +172,16 @@ class FetchControl(p: Parameters) extends Module {
     val nValid = Mux(writeToBuffer, predecode.count, 0.U)
     io.bufferRequest.nValid := nValid
 
-    // PC is initialized with the CSR value below upon leaving reset.
+    // PC is initialized with the CSR pcStart value upon leaving reset.
+    // The CSR pcStart is set via host AXI write to 0x30004 before releasing reset.
     val pc = RegInit(MakeInvalid(UInt(32.W)))
+    // Use CSR input value(0) which contains the pcStart register set by host.
+    // This allows runtime control of the start address (e.g., Boot ROM or ITCM).
+    val pcStartFromCSR = io.csr.value(0)
     val pcNext = MuxCase(pc.bits, Seq(
-        // When leaving reset (!pc.valid), jump to resetVector directly if p.resetVector is set,
-        // otherwise rely on CSR (which we also updated to default to resetVector).
-        (!pc.valid) -> Cat(p.resetVector.U(32.W)(31,2), 0.U(2.W)),
+        // When leaving reset (!pc.valid), use the CSR pcStart value.
+        // If pcStart is 0, we start from ITCM. If pcStart is 0x40000, we start from Boot ROM.
+        (!pc.valid) -> Cat(pcStartFromCSR(31,2), 0.U(2.W)),
         io.iflush.valid -> io.iflush.bits,
         io.branch.valid -> io.branch.bits,
         writeToBuffer -> predecode.nextPc,

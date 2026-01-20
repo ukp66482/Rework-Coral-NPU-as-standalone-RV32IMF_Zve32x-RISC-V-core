@@ -180,3 +180,77 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [":core_mini_axi_simulator_rvv"],
 )
+
+# VGA Display library (with SDL2 support)
+cc_library(
+    name = "vga_display",
+    srcs = ["vga_display.cc"],
+    hdrs = ["vga_display.h"],
+    copts = ["-DENABLE_SDL2"],
+    linkopts = ["-lSDL2"],
+)
+
+cc_library(
+    name = "vga_display_no_sdl",
+    srcs = ["vga_display.cc"],
+    hdrs = ["vga_display.h"],
+)
+
+# Nyancat VGA Simulator with SDL2 display
+cc_binary(
+    name = "nyancat_vga_simulator",
+    srcs = ["nyancat_vga_simulator.cc"],
+    copts = ["-DENABLE_SDL2"],
+    data = ["//examples:coralnpu_v2_nyancat_vga.elf"],
+    linkopts = ["-lSDL2"],
+    deps = [
+        ":core_mini_axi_simulator",
+        ":vga_display",
+        "//tests/verilator_sim:elf",
+    ],
+)
+
+# Nyancat VGA Simulator without SDL2 (headless mode)
+cc_binary(
+    name = "nyancat_vga_simulator_headless",
+    srcs = ["nyancat_vga_simulator.cc"],
+    data = ["//examples:coralnpu_v2_nyancat_vga.elf"],
+    deps = [
+        ":core_mini_axi_simulator",
+        ":vga_display_no_sdl",
+        "//tests/verilator_sim:elf",
+    ],
+)
+
+# General-purpose CoralNPU program runner
+cc_binary(
+    name = "coralnpu_runner",
+    srcs = ["coralnpu_runner.cc"],
+    data = [
+        ":mailbox_example.elf",
+        "//examples:coralnpu_v2_fibonacci.elf",
+        "//examples:coralnpu_v2_quicksort.elf",
+        "//examples:coralnpu_v2_hello_world_add_floats.elf",
+    ],
+    deps = [
+        ":core_mini_axi_simulator",
+        "//tests/verilator_sim:elf",
+    ],
+)
+
+# Boot ROM-based CoralNPU program runner (authentic boot process)
+# Uses Boot ROM to copy from Flash to ITCM, then executes from ITCM
+cc_binary(
+    name = "coralnpu_bootrom_runner",
+    srcs = ["coralnpu_bootrom_runner.cc"],
+    data = [
+        "//examples:coralnpu_v2_fibonacci.elf",
+        "//examples:coralnpu_v2_quicksort.elf",
+        "//examples:coralnpu_v2_hello_world_add_floats.elf",
+        "//sw/bootrom:boot_default.bin",
+    ],
+    deps = [
+        ":core_mini_axi_simulator",
+        "//tests/verilator_sim:elf",
+    ],
+)

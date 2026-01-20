@@ -25,3 +25,20 @@ coralnpu_v2_binary(
     name = "coralnpu_v2_rvv_add_intrinsic",
     srcs = ["rvv_add_intrinsic.cc"],
 )
+
+coralnpu_v2_binary(
+    name = "coralnpu_v2_nyancat_vga",
+    srcs = ["nyancat_vga.cc"],
+    hdrs = ["nyancat-frames.h"],
+    itcm_size_kbytes = 64,  # Need extra space for 24KB of frame data
+)
+
+coralnpu_v2_binary(
+    name = "coralnpu_v2_fibonacci",
+    srcs = ["fibonacci.cc"],
+)
+
+coralnpu_v2_binary(
+    name = "coralnpu_v2_quicksort",
+    srcs = ["quicksort.cc"],
+)

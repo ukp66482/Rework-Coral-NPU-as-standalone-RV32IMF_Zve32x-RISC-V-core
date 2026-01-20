@@ -916,12 +916,14 @@ class LsuV2(p: Parameters) extends Lsu(p) {
 
   val (opSize, alignedAddress) = LsuOp.opSize(slot.op, targetAddress.bits)
 
-  // ibus data path
+  // ibus data path (ITCM reads only)
   io.ibus.valid := loadUpdatedSlot.activeTransaction() && itcm && !slot.store && !faultReg.valid
   io.ibus.addr := targetLineAddr
 
-  // dbus data path
-  io.dbus.valid := dtcm && Mux(slot.store,
+  // dbus data path (DTCM accesses AND ITCM stores for self-programming support)
+  // This allows Boot ROM to copy code from Flash to ITCM
+  val dbusTarget = dtcm || (itcm && slot.store)
+  io.dbus.valid := dbusTarget && Mux(slot.store,
                                slot.activeTransaction(),
                                loadUpdatedSlot.activeTransaction()) && !faultReg.valid
   io.dbus.write := slot.store
@@ -932,12 +934,10 @@ class LsuV2(p: Parameters) extends Lsu(p) {
   io.dbus.wdata := Cat(wdata.reverse)
   io.dbus.wmask := Cat(wmask.reverse)
 
-  // ebus data path
-  // Allow stores to ITCM to go out via ebus (to support Loopback/Self-programming)
-  io.ebus.dbus.valid := ((external || peri) && Mux(slot.store,
+  // ebus data path (external and peripheral accesses)
+  io.ebus.dbus.valid := (external || peri) && Mux(slot.store,
                                                   slot.activeTransaction(),
-                                                  loadUpdatedSlot.activeTransaction()) && !faultReg.valid) || 
-                        (itcm && slot.store && slot.activeTransaction() && !faultReg.valid)
+                                                  loadUpdatedSlot.activeTransaction()) && !faultReg.valid
                         
   io.ebus.dbus.write := slot.store
   io.ebus.dbus.addr := alignedAddress
@@ -963,8 +963,10 @@ class LsuV2(p: Parameters) extends Lsu(p) {
     )))
 
   // Fault handling
+  // ITCM stores are now allowed for Boot ROM self-programming support
+  // So we no longer generate a fault for ITCM stores
   val ibusFault = Wire(Valid(new FaultInfo(p)))
-  ibusFault.valid := loadUpdatedSlot.activeTransaction() && itcm && slot.store
+  ibusFault.valid := false.B  // Disabled: ITCM stores go via dbus now
   ibusFault.bits.write := true.B
   ibusFault.bits.addr := targetLineAddr
   ibusFault.bits.epc := slot.pc

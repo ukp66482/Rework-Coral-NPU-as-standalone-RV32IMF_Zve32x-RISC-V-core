@@ -131,12 +131,21 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     val isBootRomFetch = Wire(Bool())
     // Note: BootROM check logic is defined later when we know if BootROM exists
     
-    itcmArbiter.io.source(0).readDataAddr := MakeValid(
-        core.io.ibus.valid && !isBootRomFetch, core.io.ibus.addr)
-    itcmArbiter.io.source(0).writeDataAddr :=
-        MakeInvalid(UInt(p.axi2AddrBits.W))
-    itcmArbiter.io.source(0).writeDataBits := 0.U
-    itcmArbiter.io.source(0).writeDataStrb := 0.U
+    // Detect DBus access to ITCM range (for Boot ROM copy loop)
+    val dbusToItcm = core.io.dbus.valid && memoryRegions(0).contains(core.io.dbus.addr)
+    val dbusWriteToItcm = dbusToItcm && core.io.dbus.write
+    val dbusReadFromItcm = dbusToItcm && !core.io.dbus.write
+    
+    // ITCM arbiter source(0): IBus reads OR DBus writes to ITCM
+    // Priority: ibus > dbus (ibus is always ready, so dbus will need to wait if both active)
+    val ibusActive = core.io.ibus.valid && !isBootRomFetch
+    itcmArbiter.io.source(0).readDataAddr := MuxCase(MakeInvalid(UInt(p.axi2AddrBits.W)), Seq(
+        ibusActive -> MakeValid(true.B, core.io.ibus.addr),
+        dbusReadFromItcm -> MakeValid(true.B, core.io.dbus.addr)
+    ))
+    itcmArbiter.io.source(0).writeDataAddr := MakeValid(dbusWriteToItcm, core.io.dbus.addr)
+    itcmArbiter.io.source(0).writeDataBits := Mux(dbusWriteToItcm, core.io.dbus.wdata, 0.U)
+    itcmArbiter.io.source(0).writeDataStrb := Mux(dbusWriteToItcm, core.io.dbus.wmask, 0.U)
     
     // Mux IBus return data (assuming 1 cycle latency for both ITCM and BootROM)
     core.io.ibus.rdata := Mux(RegNext(isBootRomFetch), bootRomRData, itcmArbiter.io.source(0).readData.bits)
@@ -151,7 +160,7 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     core.io.ibus.fault.bits.addr := 0.U
     core.io.ibus.fault.bits.epc := core.io.ibus.addr
 
-    // Build DTCM and connect to dbus
+    // Build DTCM and connect to dbus (for non-ITCM addresses)
     val dtcmSizeBytes: Int = 1024 * p.dtcmSizeKBytes
     val dtcmWidth = p.axi2DataBits
     val dtcmEntries = dtcmSizeBytes / (dtcmWidth / 8)
@@ -167,13 +176,17 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     dtcmWrapper.io.sram.readData := dtcm.io.rdata
     val dtcmArbiter = Module(new FabricArbiter(p))
     dtcmArbiter.io.port <> dtcmWrapper.io.fabric
+    // DBus accesses to DTCM only (non-ITCM addresses)
+    val dbusToDtcm = core.io.dbus.valid && !dbusToItcm
     dtcmArbiter.io.source(0).readDataAddr := MakeValid(
-        core.io.dbus.valid && !core.io.dbus.write, core.io.dbus.addr)
+        dbusToDtcm && !core.io.dbus.write, core.io.dbus.addr)
     dtcmArbiter.io.source(0).writeDataAddr := MakeValid(
-        core.io.dbus.valid && core.io.dbus.write, core.io.dbus.addr)
+        dbusToDtcm && core.io.dbus.write, core.io.dbus.addr)
     dtcmArbiter.io.source(0).writeDataBits := core.io.dbus.wdata
     dtcmArbiter.io.source(0).writeDataStrb := core.io.dbus.wmask
-    core.io.dbus.rdata := dtcmArbiter.io.source(0).readData.bits
+    // DBus read data: mux between ITCM and DTCM based on address
+    core.io.dbus.rdata := Mux(RegNext(dbusToItcm), itcmArbiter.io.source(0).readData.bits, 
+                              dtcmArbiter.io.source(0).readData.bits)
     core.io.dbus.ready := true.B  // Can always read/write TCM
 
     // Connect TCMs and CSR into fabric
@@ -207,6 +220,34 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     } else {
       isBootRomFetch := false.B
       bootRomRData := 0.U
+    }
+
+    // VGA Peripheral stub (port 4) - responds with ID register only
+    // Full VGA with pixClock should be connected externally
+    if (memoryRegions.length > 4) {
+      // Create a simple stub that responds to reads with VGA ID
+      val vgaReadData = RegInit(0.U(p.axi2DataBits.W))
+      val vgaReadValid = RegInit(false.B)
+      val vgaWriteResp = RegInit(false.B)
+      
+      // VGA ID = 0x56474131 ('VGA1')
+      when(fabricMux.io.ports(4).readDataAddr.valid) {
+        vgaReadData := 0x56474131L.U
+        vgaReadValid := true.B
+      }.otherwise {
+        vgaReadValid := false.B
+      }
+      
+      when(fabricMux.io.ports(4).writeDataAddr.valid) {
+        vgaWriteResp := true.B
+      }.otherwise {
+        vgaWriteResp := false.B
+      }
+      
+      fabricMux.io.ports(4).readData.valid := vgaReadValid
+      fabricMux.io.ports(4).readData.bits := vgaReadData
+      fabricMux.io.ports(4).writeResp := vgaWriteResp
+      fabricMux.io.periBusy(4) := false.B
     }
 
     // Create AXI Slave interface and connect internal fabric to AXI

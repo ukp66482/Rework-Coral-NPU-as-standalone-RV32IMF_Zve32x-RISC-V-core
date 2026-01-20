@@ -44,6 +44,13 @@ def _verilator_cocotb_model_impl(ctx):
     make_log = ctx.actions.declare_file(outdir_name + "/make.log")
     outdir = output_file.dirname
 
+    # Collect all verilog source files
+    all_verilog_sources = [ctx.file.verilog_source.path]
+    all_verilog_deps = [ctx.file.verilog_source]
+    for dep in ctx.files.verilog_deps:
+        all_verilog_sources.append("$PWD/" + dep.path)
+        all_verilog_deps.append(dep)
+
     verilator_root = "$PWD/{}.runfiles/coralnpu_hw/external/verilator".format(ctx.executable._verilator_bin.path)
     cocotb_lib_path = "$PWD/{}".format(ctx.files._cocotb_verilator_lib[0].dirname)
     verilator_cmd = " ".join("""
@@ -60,7 +67,7 @@ def _verilator_cocotb_model_impl(ctx):
             {cflags} \
             $PWD/{verilator_cpp} \
             {vlt_file} \
-            {verilog_source}
+            {verilog_sources}
     """.strip().split("\n")).format(
         verilator = ctx.executable._verilator_bin.path,
         verilator_root = verilator_root,
@@ -70,7 +77,7 @@ def _verilator_cocotb_model_impl(ctx):
         cflags = " ".join(ctx.attr.cflags),
         verilator_cpp = ctx.files._cocotb_verilator_cpp[0].path,
         vlt_file = vlt_file.path,
-        verilog_source = ctx.file.verilog_source.path,
+        verilog_sources = " ".join(all_verilog_sources),
         trace = "--trace" if ctx.attr.trace else "",
     )
 
@@ -96,6 +103,7 @@ def _verilator_cocotb_model_impl(ctx):
                 depset(ctx.files._cocotb_verilator_lib),
                 depset(ctx.files._cocotb_verilator_cpp),
                 depset([ctx.file.verilog_source]),
+                depset(ctx.files.verilog_deps),
                 depset([vlt_file]),
             ],
         ),
@@ -126,12 +134,14 @@ verilator_cocotb_model = rule(
 
     Attributes:
         verilog_source: The verilog source file to build the model from.
+        verilog_deps: Additional verilog source files (dependencies).
         hdl_toplevel: The name of the toplevel module.
         cflags: A list of flags to pass to the compiler.
     """,
     implementation = _verilator_cocotb_model_impl,
     attrs = {
         "verilog_source": attr.label(allow_single_file = True, mandatory = True),
+        "verilog_deps": attr.label_list(allow_files = True, default = []),
         "hdl_toplevel": attr.string(mandatory = True),
         "cflags": attr.string_list(default = []),
         "trace": attr.bool(default = False),

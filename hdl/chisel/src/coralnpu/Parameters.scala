@@ -45,6 +45,7 @@ object MemoryRegions {
     new MemoryRegion(0x0010000, 0x00008000, MemoryRegionType.DMEM), // DTCM
     new MemoryRegion(0x0030000, 0x00001000, MemoryRegionType.Peripheral), // CSR
     new MemoryRegion(0x00040000, 0x00002000, MemoryRegionType.BootROM), // BootROM
+    new MemoryRegion(0x00050000, 0x00001000, MemoryRegionType.Peripheral), // VGA Control Registers
   )
   def highmem(itcmSizeKBytes: Int, dtcmSizeKBytes: Int) = Seq(
     // The DTCM and CSR base addresses are deliberately offset in `highmem`
@@ -53,6 +54,7 @@ object MemoryRegions {
     new MemoryRegion(0x00100000, dtcmSizeKBytes * 1024, MemoryRegionType.DMEM), // DTCM
     new MemoryRegion(0x00200000, 0x00001000, MemoryRegionType.Peripheral), // CSR
     new MemoryRegion(0x00210000, 0x00002000, MemoryRegionType.BootROM), // BootROM (8KB)
+    new MemoryRegion(0x00220000, 0x00001000, MemoryRegionType.Peripheral), // VGA Control Registers
   )
 }
 
@@ -63,8 +65,8 @@ object Parameters {
   val dtcmSizeKBytesHighmem = 1024
   
   // BootROM file paths for each configuration
-  val bootRomFileDefault = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_default.hex"
-  val bootRomFileHighmem = "/home/ukp66482/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_highmem.hex"
+  val bootRomFileDefault = "/home/tobyphant/Documents/coding/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_default.hex"
+  val bootRomFileHighmem = "/home/tobyphant/Documents/coding/Rework-Coral-NPU-as-standalone-RV32IMF_Zve32x-RISC-V-core/sw/bootrom/boot_highmem.hex"
   
   // Reset vectors for each configuration (BootROM base addresses)
   val resetVectorDefault = 0x00040000  // BootROM @ 0x40000

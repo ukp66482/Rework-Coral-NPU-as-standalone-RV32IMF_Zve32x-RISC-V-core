@@ -25,6 +25,7 @@ exports_files(
         "RstSync.sv",
         "TlulAdapterSram.sv",
         "Uart.sv",
+        "TrueDualPortRAM32.v",
     ],
     visibility = ["//visibility:public"],
 )
@@ -59,5 +60,11 @@ verilog_library(
 verilog_library(
     name = "sram_1rw_256x288",
     srcs = ["Sram_1rwm_256x288.v"],
+    visibility = ["//visibility:public"],
+)
+
+verilog_library(
+    name = "TrueDualPortRAM32",
+    srcs = ["TrueDualPortRAM32.v"],
     visibility = ["//visibility:public"],
 )
