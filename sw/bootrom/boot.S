@@ -7,7 +7,7 @@ _start:
     /* 1. Configuration constants */
     li s0, 0x20000000       /* Source Address (Flash/External Memory) */
     li s1, 0x00000000       /* Destination Address (ITCM) */
-    li s2, 0x00001000       /* Size to copy (4KB) */
+    li s2, 0x00002000       /* Size to copy (8KB = full ITCM) */
     add s2, s2, s1          /* Calculate End Address */
 
 copy_loop:

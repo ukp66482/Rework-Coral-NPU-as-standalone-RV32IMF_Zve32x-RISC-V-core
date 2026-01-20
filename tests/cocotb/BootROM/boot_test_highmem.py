@@ -8,7 +8,6 @@ Memory Map (HighMem):
   BootROM: 0x00210000 (8KB)
   Flash:   0x20000000 (External)
 """
-
 import cocotb
 from cocotb.triggers import ClockCycles, Timer
 import numpy as np

@@ -254,3 +254,26 @@ cc_binary(
         "//tests/verilator_sim:elf",
     ],
 )
+
+# Boot ROM Fibonacci Test (bazel test version of coralnpu_bootrom_runner)
+# Verifies the AUTHENTIC boot process:
+#   1. Program is loaded to Flash (0x20000000)
+#   2. CPU starts from Boot ROM (0x00040000)
+#   3. Boot ROM copies Flash -> ITCM
+#   4. Boot ROM jumps to ITCM to execute Fibonacci
+#   5. Fibonacci results are verified from mailbox
+#
+# Usage:
+#   bazel test //hw_sim:fibonacci_bootrom_test --test_output=all
+cc_test(
+    name = "fibonacci_bootrom_test",
+    srcs = ["fibonacci_bootrom_test.cc"],
+    data = [
+        "//examples:coralnpu_v2_fibonacci.elf",
+        "//sw/bootrom:boot_default.bin",
+    ],
+    deps = [
+        ":core_mini_axi_simulator",
+        "//tests/verilator_sim:elf",
+    ],
+)
